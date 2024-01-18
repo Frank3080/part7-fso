@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Link, useMatch, useNavigate } from "react-router-dom";
+import { useField } from "./hooks/index"
 
 const Menu = () => {
   const padding = {
@@ -68,9 +69,9 @@ const Footer = () => (
 
 const CreateNew = (props) => {
   const navigate = useNavigate()
-  const [content, setContent] = useState("");
-  const [author, setAuthor] = useState("");
-  const [info, setInfo] = useState("");
+  const content = useField("text");
+  const author = useField("text");
+  const info= useField("text");
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -80,13 +81,18 @@ const CreateNew = (props) => {
       info: e.target.info.value,
       votes: 0,
     });
-
     props.setNotification(`Anecdote "${e.target.content.value}" was created`)
     setTimeout(() => {
       props.setNotification('')
     }, 5000)
     navigate('/')
   };
+
+  const handleReset = () => {
+    content.reset()
+    author.reset()
+    info.reset()
+  }
 
   return (
     <div>
@@ -96,27 +102,25 @@ const CreateNew = (props) => {
           content
           <input
             name="content"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
+            {...content.values}
           />
         </div>
         <div>
           author
           <input
             name="author"
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
+            {...author.values}
           />
         </div>
         <div>
           url for more info
           <input
             name="info"
-            value={info}
-            onChange={(e) => setInfo(e.target.value)}
+            {...info.values}
           />
         </div>
         <button>create</button>
+        <button type='button' onClick={handleReset}>reset</button>
       </form>
     </div>
   );
