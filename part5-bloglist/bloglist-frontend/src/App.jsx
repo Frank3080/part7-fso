@@ -6,19 +6,28 @@ import LoginForm from "./components/LoginForm";
 import BlogForm from "./components/BlogForm";
 import Notification from "./components/Notification";
 import Toggable from "./components/Toggable";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setErrorNotification, setSuccessNotification } from "./reducers/notificationReducer";
 
 const App = () => {
-  const [blogs, setBlogs] = useState([]);
+  const blogs = useSelector((state) => state.blogs)
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [user, setUser] = useState(null);
   const dispatch = useDispatch()
 
   useEffect(() => {
-    blogService.getAll().then((blogs) => setBlogs(blogs));
-  }, []);
+    const initializeBlogs = async () => {
+      try {
+        const blogs = await blogService.getAll();
+        dispatch({ type: 'INIT_BLOGS', payload: blogs });
+      } catch (error) {
+        console.error('Error initializing blogs:', error);
+      }
+    };
+
+    initializeBlogs();
+  }, [dispatch]);
 
   useEffect(() => {
     const loggedinUserJSON = window.localStorage.getItem("loggedinUser");
@@ -42,7 +51,7 @@ const App = () => {
       const filtered = blogList.filter(
         (blog) => blog.user.username === username
       );
-      setBlogs(filtered);
+      dispatch({ type: 'CREATE_BLOG', payload: filtered });
       setUsername("");
       setPassword("");
       dispatch(setSuccessNotification({
@@ -69,34 +78,48 @@ const App = () => {
   const createBlog = async (blogObject) => {
     try {
       const newBlog = await blogService.create(blogObject);
-      setBlogs(blogs.concat(newBlog));
-      dispatch(setSuccessNotification({
-        text: `A new blog titled ${newBlog.title} by ${newBlog.authot} added.`,
-        error: false
-    }))
+      // Dispatch the action instead of using setBlogs
+      dispatch({ type: 'CREATE_BLOG', payload: newBlog });
+      dispatch(
+        setSuccessNotification({
+          text: `A new blog titled ${newBlog.title} by ${newBlog.author} added.`,
+          error: false,
+        })
+      );
     } catch (error) {
-      messageHandler("Posting new blog failed", "error");
-      dispatch(setErrorNotification({
-        text: "Posting new blog failed",
-        error: true
-    }))
+      dispatch(
+        setErrorNotification({
+          text: "Posting new blog failed",
+          error: true,
+        })
+      );
     }
   };
-
+  
   const updateBlog = async (blog) => {
     try {
+      dispatch({ type: 'UPDATE_BLOG', payload: { ...blog, likes: blog.likes + 1 } });
       await blogService.update(blog.id, blog);
-      const blogs = await blogService.getAll();
-      setBlogs(blogs.sort((a, b) => b.likes - a.likes));
-      dispatch(setSuccessNotification({
-        text: `${blog.title} liked.`,
-        error: false
-    }))
+  
+      const updatedBlogs = await blogService.getAll();
+      dispatch({ type: 'INIT_BLOGS', payload: updatedBlogs });
+  
+      dispatch(
+        setSuccessNotification({
+          text: `${blog.title} liked.`,
+          error: false,
+        })
+      );
     } catch (error) {
-      dispatch(setErrorNotification({
-        text: `Liking ${blog.title} failed.`,
-        error: true
-    }))
+      // Revert the UI state on error
+      dispatch({ type: 'UPDATE_BLOG', payload: { ...blog, likes: blog.likes - 1 } });
+  
+      dispatch(
+        setErrorNotification({
+          text: `Liking ${blog.title} failed.`,
+          error: true,
+        })
+      );
     }
   };
 
@@ -105,7 +128,7 @@ const App = () => {
       if (window.confirm(`Remove blog: "${blog.title}"?`)) {
         await blogService.deleteBlog(id);
         const response = await blogService.getAll();
-        setBlogs(response);
+        dispatch({ type: 'INIT_BLOGS', payload: response });
         dispatch(setSuccessNotification({
           text: `${blog.title} has been removed.`,
           error: false

@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { updateBlog as updateBlogAction, deleteBlog as deleteBlogAction } from "../reducers/blogReducer"
+import { useDispatch } from "react-redux";
 
-const Blog = ({ blog, updateBlog, deleteBlog, username }) => {
+const Blog = ({ blog, username }) => {
   const [visible, setVisible] = useState(false);
   const [userLikes, setUserLikes] = useState(blog.likes);
+  const dispatch = useDispatch()
 
   const blogStyle = {
     paddingTop: 10,
@@ -23,12 +26,16 @@ const Blog = ({ blog, updateBlog, deleteBlog, username }) => {
 
   const addLike = () => {
     setUserLikes(userLikes + 1);
-    updateBlog(updatedBlog);
+    dispatch(updateBlogAction(updatedBlog))
   };
 
   const handleClick = () => {
     setVisible((prevVisible) => !prevVisible);
   };
+
+  const handleDelete = () => {
+    dispatch(deleteBlogAction(blog.id))
+  }
 
   return (
     <div>
@@ -47,7 +54,7 @@ const Blog = ({ blog, updateBlog, deleteBlog, username }) => {
           </div>
           <div>{blog.username}</div>
           {blog.username === username && (
-            <button onClick={() => deleteBlog(blog.id, blog)}>Remove</button>
+            <button onClick={handleDelete}>Remove</button>
           )}
         </div>
       )}
